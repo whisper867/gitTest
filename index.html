@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>xx 权限审视工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #eef1f5;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        /* ===== Header ===== */
+        .header {
+            background: linear-gradient(135deg, #1a73e8, #1565c0);
+            color: #fff;
+            padding: 0 32px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header h1 {
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .header-user {
+            font-size: 14px;
+            opacity: 0.85;
+        }
+
+        .header-back {
+            display: none;
+            background: rgba(255,255,255,0.12);
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 6px 14px;
+            border-radius: 6px;
+            transition: background 0.2s;
+            margin-right: 12px;
+        }
+
+        .header-back:hover {
+            background: rgba(255,255,255,0.22);
+        }
+
+        /* ===== Main Layout ===== */
+        .main {
+            display: flex;
+            height: calc(100vh - 56px);
+        }
+
+        /* ===== Left Panel: Todo List ===== */
+        .left-panel {
+            width: 400px;
+            min-width: 400px;
+            background: #fff;
+            border-right: 1px solid #e4e7ed;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 20px 24px 12px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #222;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .todo-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px;
+        }
+
+        .todo-card {
+            background: #fff;
+            border: 1px solid #e8eaed;
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .todo-card:hover {
+            border-color: #1a73e8;
+            box-shadow: 0 2px 8px rgba(26,115,232,0.1);
+        }
+
+        .todo-card.active {
+            border-color: #1a73e8;
+            background: #f0f6ff;
+            box-shadow: 0 2px 8px rgba(26,115,232,0.15);
+        }
+
+        .todo-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .todo-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #222;
+        }
+
+        .status-badge {
+            display: inline-block;
+            font-size: 12px;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .todo-info {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.9;
+        }
+
+        .todo-info span {
+            margin-right: 18px;
+        }
+
+        /* ===== Right Panel: Detail ===== */
+        .right-panel {
+            flex: 1;
+            background: #f5f7fa;
+            overflow-y: auto;
+            padding: 24px 32px;
+        }
+
+        .detail-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #bbb;
+            font-size: 15px;
+        }
+
+        .detail-section {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+
+        .detail-section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #222;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 32px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .info-label {
+            color: #888;
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* ===== Permission Tree ===== */
+        .app-group {
+            margin-bottom: 10px;
+        }
+
+        .app-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            background: #f5f8ff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            user-select: none;
+        }
+
+        .app-header:hover {
+            background: #e8f0fe;
+        }
+
+        .app-toggle {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 11px;
+            color: #666;
+            transition: transform 0.2s;
+        }
+
+        .app-toggle.expanded {
+            transform: rotate(90deg);
+        }
+
+        .app-icon {
+            width: 32px;
+            height: 32px;
+            background: #1a73e8;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .app-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            flex: 1;
+        }
+
+        .app-badge {
+            font-size: 11px;
+            background: #e8f0fe;
+            color: #1a73e8;
+            padding: 3px 10px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        .perm-list {
+            padding-left: 44px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .perm-list.show {
+            display: block;
+            animation: slideDown 0.2s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; max-height: 0; }
+            to { opacity: 1; max-height: 500px; }
+        }
+
+        .perm-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 12px;
+            border-left: 2px solid #e0e0e0;
+            margin-left: 8px;
+            font-size: 13px;
+            color: #555;
+            transition: background 0.15s;
+        }
+
+        .perm-item:hover {
+            background: #fafafa;
+        }
+
+        .perm-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .perm-dot {
+            width: 6px;
+            height: 6px;
+            background: #1a73e8;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .perm-delete {
+            background: none;
+            border: 1px solid #e0e0e0;
+            color: #999;
+            font-size: 12px;
+            padding: 4px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .perm-delete:hover {
+            border-color: #d32f2f;
+            color: #d32f2f;
+            background: #fff5f5;
+        }
+
+        /* ===== Notes ===== */
+        .notes-textarea {
+            width: 100%;
+            min-height: 110px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            color: #333;
+            resize: vertical;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        .notes-textarea:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 3px rgba(26,115,232,0.08);
+        }
+
+        .notes-textarea::placeholder {
+            color: #bbb;
+        }
+
+        /* ===== Action Bar ===== */
+        .action-bar {
+            display: flex;
+            gap: 14px;
+            justify-content: flex-end;
+            padding-top: 8px;
+        }
+
+        .btn {
+            padding: 9px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #1a73e8;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #1565c0;
+            box-shadow: 0 2px 8px rgba(26,115,232,0.3);
+        }
+
+        .btn-danger {
+            background: #d32f2f;
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #b71c1c;
+        }
+
+        .btn-outline {
+            background: #fff;
+            color: #d32f2f;
+            border: 1px solid #d32f2f;
+        }
+
+        .btn-outline:hover {
+            background: #fbe9e7;
+        }
+
+        .btn-success {
+            background: #2e7d32;
+            color: #fff;
+        }
+
+        .btn-success:hover {
+            background: #1b5e20;
+            box-shadow: 0 2px 8px rgba(46,125,50,0.3);
+        }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-box {
+            background: #fff;
+            border-radius: 14px;
+            padding: 28px 32px;
+            width: 420px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            animation: modalIn 0.2s ease;
+        }
+
+        @keyframes modalIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #222;
+        }
+
+        .modal-message {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: #323232;
+            color: #fff;
+            padding: 10px 28px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 300;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d0d0d0;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #b0b0b0;
+        }
+
+        /* ===== Deerflow Badge ===== */
+        .deerflow-badge {
+            position: fixed;
+            bottom: 14px;
+            right: 16px;
+            font-size: 11px;
+            color: #bbb;
+            text-decoration: none;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+            z-index: 50;
+        }
+
+        .deerflow-badge:hover {
+            opacity: 1;
+            color: #1a73e8;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== Header ===== -->
+    <div class="header">
+        <div class="header-left">
+            <button class="header-back" id="headerBack" onclick="backToList()">&#8592; 返回列表</button>
+            <h1>xx 权限审视工具</h1>
+        </div>
+        <span class="header-user">XX 先生/女士，你好！</span>
+    </div>
+
+    <!-- ===== Main Layout ===== -->
+    <div class="main">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <div class="panel-header">待办列表</div>
+            <div class="todo-list" id="todoList"></div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel" id="rightPanel">
+            <div class="detail-placeholder" id="placeholder">请从左侧选择一个待办事项查看详情</div>
+            <div id="detailView" style="display:none;">
+                <!-- Personnel Info -->
+                <div class="detail-section">
+                    <div class="detail-section-title">转岗人员信息</div>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">姓名：</span>
+                            <span class="info-value" id="detailName"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">工号：</span>
+                            <span class="info-value" id="detailEmpId"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Applications & Permissions -->
+                <div class="detail-section">
+                    <div class="detail-section-title">应用及权限</div>
+                    <div id="permissionTree"></div>
+                </div>
+
+                <!-- Review Notes -->
+                <div class="detail-section">
+                    <div class="detail-section-title">审视备注</div>
+                    <textarea class="notes-textarea" placeholder="请输入审视备注..."></textarea>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="action-bar">
+                    <button class="btn btn-outline" onclick="confirmDelete()">删除权限</button>
+                    <button class="btn btn-success" onclick="confirmReview()">确认审阅</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Modal ===== -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-box">
+            <div class="modal-title" id="modalTitle"></div>
+            <div class="modal-message" id="modalMessage"></div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" id="modalConfirm" onclick="closeModal()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Toast ===== -->
+    <div class="toast" id="toast"></div>
+
+    <a href="https://deerflow.tech" target="_blank" class="deerflow-badge">Created by Deerflow</a>
+
+    <script>
+        // ===== Mock Data =====
+        const todoData = [
+            {
+                id: 1,
+                orderNo: "20240615001",
+                name: "张三",
+                empId: "EMP100234",
+                status: "待处理",
+                apps: [
+                    { name: "OA办公系统", icon: "OA", permissions: ["审批流程管理", "文档查看", "日程管理"] },
+                    { name: "代码仓库(GitLab)", icon: "GL", permissions: ["项目读取", "代码提交", "分支管理", "CI/CD配置"] },
+                    { name: "数据平台", icon: "DP", permissions: ["数据报表查看", "数据导出"] }
+                ]
+            },
+            {
+                id: 2,
+                orderNo: "20240615002",
+                name: "李四",
+                empId: "EMP100567",
+                status: "待处理",
+                apps: [
+                    { name: "项目管理系统", icon: "PM", permissions: ["任务创建", "任务分配", "进度查看"] },
+                    { name: "OA办公系统", icon: "OA", permissions: ["审批流程管理", "文档查看"] }
+                ]
+            },
+            {
+                id: 3,
+                orderNo: "20240615003",
+                name: "王五",
+                empId: "EMP100891",
+                status: "待处理",
+                apps: [
+                    { name: "监控平台", icon: "MT", permissions: ["告警查看", "日志查询", "配置修改"] },
+                    { name: "代码仓库(GitLab)", icon: "GL", permissions: ["项目读取", "代码提交"] }
+                ]
+            },
+            {
+                id: 4,
+                orderNo: "20240615004",
+                name: "赵六",
+                empId: "EMP100345",
+                status: "待处理",
+                apps: [
+                    { name: "数据平台", icon: "DP", permissions: ["数据报表查看", "数据导出", "数据建模"] }
+                ]
+            }
+        ];
+
+        let currentTodo = null;
+
+        // ===== Render Todo List =====
+        function renderTodoList() {
+            const container = document.getElementById("todoList");
+            container.innerHTML = todoData.map((todo, index) => `
+                <div class="todo-card" id="card-${todo.id}" onclick="showDetail(${todo.id})">
+                    <div class="todo-card-header">
+                        <span class="todo-label">待办${index + 1}</span>
+                        <span class="status-badge status-pending">${todo.status}</span>
+                    </div>
+                    <div class="todo-info">
+                        <span>工单号：${todo.orderNo}</span>
+                    </div>
+                    <div class="todo-info">
+                        <span>转岗人员：${todo.name}</span>
+                        <span>工号：${todo.empId}</span>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        // ===== Show Detail (right panel) =====
+        function showDetail(id) {
+            currentTodo = todoData.find(t => t.id === id);
+            if (!currentTodo) return;
+
+            // Highlight active card
+            document.querySelectorAll(".todo-card").forEach(c => c.classList.remove("active"));
+            document.getElementById("card-" + id).classList.add("active");
+
+            document.getElementById("detailName").textContent = currentTodo.name;
+            document.getElementById("detailEmpId").textContent = currentTodo.empId;
+            renderPermissionTree(currentTodo.apps);
+
+            document.getElementById("placeholder").style.display = "none";
+            document.getElementById("detailView").style.display = "block";
+
+            // Show back button in header
+            document.getElementById("headerBack").style.display = "inline-block";
+        }
+
+        // ===== Back to list (hide detail) =====
+        function backToList() {
+            document.querySelectorAll(".todo-card").forEach(c => c.classList.remove("active"));
+            document.getElementById("placeholder").style.display = "flex";
+            document.getElementById("detailView").style.display = "none";
+            document.getElementById("headerBack").style.display = "none";
+            currentTodo = null;
+        }
+
+        // ===== Render Permission Tree =====
+        function renderPermissionTree(apps) {
+            const container = document.getElementById("permissionTree");
+            container.innerHTML = apps.map((app, i) => `
+                <div class="app-group">
+                    <div class="app-header" onclick="toggleApp(${i})">
+                        <span class="app-toggle" id="toggle-${i}">&#9654;</span>
+                        <span class="app-icon">${app.icon}</span>
+                        <span class="app-name">${app.name}</span>
+                        <span class="app-badge">${app.permissions.length} 项权限</span>
+                    </div>
+                    <div class="perm-list" id="perm-${i}">
+                        ${app.permissions.map(perm => `
+                            <div class="perm-item">
+                                <span class="perm-name">
+                                    <span class="perm-dot"></span>
+                                    ${perm}
+                                </span>
+                                <button class="perm-delete" onclick="deletePerm('${app.name}', '${perm}')">删除</button>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        // ===== Toggle App Group =====
+        function toggleApp(index) {
+            const permList = document.getElementById("perm-" + index);
+            const toggle = document.getElementById("toggle-" + index);
+            permList.classList.toggle("show");
+            toggle.classList.toggle("expanded");
+        }
+
+        // ===== Delete Permission =====
+        function deletePerm(appName, permName) {
+            showModal(
+                "删除确认",
+                `确定要删除「${appName}」中的「${permName}」权限吗？`,
+                () => {
+                    if (currentTodo) {
+                        const app = currentTodo.apps.find(a => a.name === appName);
+                        if (app) {
+                            app.permissions = app.permissions.filter(p => p !== permName);
+                            renderPermissionTree(currentTodo.apps);
+                        }
+                    }
+                    showToast("权限已删除");
+                }
+            );
+            document.getElementById("modalConfirm").className = "btn btn-danger";
+        }
+
+        // ===== Confirm Delete (bulk) =====
+        function confirmDelete() {
+            showModal(
+                "删除权限",
+                "请选择需要删除的权限后点击确认，或直接在权限列表中逐条删除。",
+                () => { showToast("请在列表中选择要删除的权限"); }
+            );
+        }
+
+        // ===== Confirm Review =====
+        function confirmReview() {
+            showModal(
+                "确认审阅",
+                "确认已完成权限审视？确认后此待办将被关闭。",
+                () => {
+                    showToast("审阅已确认，待办已关闭");
+                    setTimeout(() => backToList(), 800);
+                }
+            );
+            document.getElementById("modalConfirm").className = "btn btn-success";
+        }
+
+        // ===== Modal =====
+        function showModal(title, message, onConfirm) {
+            document.getElementById("modalTitle").textContent = title;
+            document.getElementById("modalMessage").textContent = message;
+            document.getElementById("modal").classList.add("show");
+            document.getElementById("modalConfirm").onclick = () => {
+                closeModal();
+                if (onConfirm) onConfirm();
+            };
+        }
+
+        function closeModal() {
+            document.getElementById("modal").classList.remove("show");
+        }
+
+        // ===== Toast =====
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.classList.add("show");
+            setTimeout(() => toast.classList.remove("show"), 2000);
+        }
+
+        // ===== Init =====
+        renderTodoList();
+    </script>
+</body>
+</html>
